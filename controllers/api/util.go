@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"net/mail"
 
-	ctx "github.com/gophish/gophish/context"
-	log "github.com/gophish/gophish/logger"
-	"github.com/gophish/gophish/models"
 	"github.com/jinzhu/gorm"
+	ctx "github.com/shtrv/gophish/context"
+	log "github.com/shtrv/gophish/logger"
+	"github.com/shtrv/gophish/models"
 	"github.com/sirupsen/logrus"
 )
 

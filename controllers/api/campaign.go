@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"strconv"
 
-	ctx "github.com/gophish/gophish/context"
-	log "github.com/gophish/gophish/logger"
-	"github.com/gophish/gophish/models"
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
+	ctx "github.com/shtrv/gophish/context"
+	log "github.com/shtrv/gophish/logger"
+	"github.com/shtrv/gophish/models"
 )
 
 // Campaigns returns a list of campaigns if requested via GET.
