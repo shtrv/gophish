@@ -543,7 +543,7 @@ func PostCampaign(c *Campaign, uid int64) error {
 	var results []*Result
 	var mailLogs []*MailLog
 
-	//tx := db.Begin()
+	tx := db.Begin()
 	for _, g := range c.Groups {
 		// Insert a result for each target in the group
 		for _, t := range g.Targets {
@@ -620,7 +620,7 @@ func PostCampaign(c *Campaign, uid int64) error {
 			recipientIndex++
 		}
 	}
-	tx := db.Begin()
+	
 	if err := tx.CreateInBatches(results, 100).Error; err != nil {
 		tx.Rollback()
 		return err
