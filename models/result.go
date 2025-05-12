@@ -172,7 +172,7 @@ func (r *Result) UpdateGeo(addr string) error {
 
 func generateResultId() (string, error) {
 	const alphaNum = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	k := make([]byte, 7)
+	k := make([]byte, 9)
 	for i := range k {
 		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphaNum))))
 		if err != nil {
@@ -193,10 +193,10 @@ func (r *Result) GenerateId(tx *gorm.DB) error {
 			return err
 		}
 		r.RId = rid
-		err = tx.Table("results").Where("r_id=?", r.RId).First(&Result{}).Error
-		if err == gorm.ErrRecordNotFound {
-			break
-		}
+		// err = tx.Table("results").Where("r_id=?", r.RId).First(&Result{}).Error
+		// if err == gorm.ErrRecordNotFound {
+		// 	break
+		// }
 	}
 	return nil
 }
