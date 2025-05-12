@@ -539,7 +539,11 @@ func PostCampaign(c *Campaign, uid int64) error {
 	// Insert all the results
 	resultMap := make(map[string]bool)
 	recipientIndex := 0
-	tx := db.Begin()
+
+	var results []*Result
+	var mailLogs []*MailLog
+
+	//tx := db.Begin()
 	for _, g := range c.Groups {
 		// Insert a result for each target in the group
 		for _, t := range g.Targets {
@@ -567,7 +571,7 @@ func PostCampaign(c *Campaign, uid int64) error {
 			err = r.GenerateId(tx)
 			if err != nil {
 				log.Error(err)
-				tx.Rollback()
+				//tx.Rollback()
 				return err
 			}
 			processing := false
@@ -575,36 +579,55 @@ func PostCampaign(c *Campaign, uid int64) error {
 				r.Status = StatusSending
 				processing = true
 			}
-			err = tx.Save(r).Error
-			if err != nil {
-				log.WithFields(logrus.Fields{
-					"email": t.Email,
-				}).Errorf("error creating result: %v", err)
-				tx.Rollback()
-				return err
-			}
-			c.Results = append(c.Results, *r)
-			log.WithFields(logrus.Fields{
-				"email":     r.Email,
-				"send_date": sendDate,
-			}).Debug("creating maillog")
-			m := &MailLog{
+			// err = tx.Save(r).Error
+			// if err != nil {
+			// 	log.WithFields(logrus.Fields{
+			// 		"email": t.Email,
+			// 	}).Errorf("error creating result: %v", err)
+			// 	tx.Rollback()
+			// 	return err
+			// }
+
+			results = append(results, r)
+			mailLogs = append(mailLogs, &MailLog{
 				UserId:     c.UserId,
 				CampaignId: c.Id,
 				RId:        r.RId,
 				SendDate:   sendDate,
 				Processing: processing,
-			}
-			err = tx.Save(m).Error
-			if err != nil {
-				log.WithFields(logrus.Fields{
-					"email": t.Email,
-				}).Errorf("error creating maillog entry: %v", err)
-				tx.Rollback()
-				return err
-			}
+			})
+
+			c.Results = append(c.Results, *r)
+			// log.WithFields(logrus.Fields{
+			// 	"email":     r.Email,
+			// 	"send_date": sendDate,
+			// }).Debug("creating maillog")
+			// m := &MailLog{
+			// 	UserId:     c.UserId,
+			// 	CampaignId: c.Id,
+			// 	RId:        r.RId,
+			// 	SendDate:   sendDate,
+			// 	Processing: processing,
+			// }
+			// err = tx.Save(m).Error
+			// if err != nil {
+			// 	log.WithFields(logrus.Fields{
+			// 		"email": t.Email,
+			// 	}).Errorf("error creating maillog entry: %v", err)
+			// 	tx.Rollback()
+			// 	return err
+			// }
 			recipientIndex++
 		}
+	}
+	tx := db.Begin()
+	if err := tx.CreateInBatches(results, 100).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.CreateInBatches(mailLogs, 100).Error; err != nil {
+		tx.Rollback()
+		return err
 	}
 	return tx.Commit().Error
 }
