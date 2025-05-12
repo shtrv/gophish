@@ -11,9 +11,9 @@ import (
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 	"github.com/emersion/go-message/charset"
-	"github.com/gophish/gophish/dialer"
-	log "github.com/gophish/gophish/logger"
-	"github.com/gophish/gophish/models"
+	"github.com/shtrv/gophish/dialer"
+	log "github.com/shtrv/gophish/logger"
+	"github.com/shtrv/gophish/models"
 
 	"github.com/jordan-wright/email"
 )

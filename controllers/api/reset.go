@@ -3,9 +3,9 @@ package api
 import (
 	"net/http"
 
-	"github.com/gophish/gophish/auth"
-	ctx "github.com/gophish/gophish/context"
-	"github.com/gophish/gophish/models"
+	"github.com/shtrv/gophish/auth"
+	ctx "github.com/shtrv/gophish/context"
+	"github.com/shtrv/gophish/models"
 )
 
 // Reset (/api/reset) resets the currently authenticated user's API key

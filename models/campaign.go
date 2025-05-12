@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"time"
 
-	log "github.com/gophish/gophish/logger"
-	"github.com/gophish/gophish/webhook"
 	"github.com/jinzhu/gorm"
+	log "github.com/shtrv/gophish/logger"
+	"github.com/shtrv/gophish/webhook"
 	"github.com/sirupsen/logrus"
 )
 

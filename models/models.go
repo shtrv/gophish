@@ -2,42 +2,36 @@ package models
 
 import (
 	"crypto/rand"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
+	"github.com/golang-migrate/migrate/v4/database/mysql"
+	"github.com/golang-migrate/migrate/v4/database/sqlite3"
 	"io"
-	"io/ioutil"
 	"os"
 	"time"
 
-	"bitbucket.org/liamstask/goose/lib/goose"
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 
-	mysql "github.com/go-sql-driver/mysql"
-	"github.com/gophish/gophish/auth"
-	"github.com/gophish/gophish/config"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/mysql"
+	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 
-	log "github.com/gophish/gophish/logger"
 	"github.com/jinzhu/gorm"
-	_ "github.com/mattn/go-sqlite3" // Blank import needed to import sqlite3
+	"github.com/shtrv/gophish/auth"
+	"github.com/shtrv/gophish/config"
+	log "github.com/shtrv/gophish/logger"
 )
 
 var db *gorm.DB
 var conf *config.Config
 
-const MaxDatabaseConnectionAttempts int = 10
-
-// DefaultAdminUsername is the default username for the administrative user
-const DefaultAdminUsername = "admin"
-
-// InitialAdminPassword is the environment variable that specifies which
-// password to use for the initial root login instead of generating one
-// randomly
-const InitialAdminPassword = "GOPHISH_INITIAL_ADMIN_PASSWORD"
-
-// InitialAdminApiToken is the environment variable that specifies the
-// API token to seed the initial root login instead of generating one
-// randomly
-const InitialAdminApiToken = "GOPHISH_INITIAL_ADMIN_API_TOKEN"
+const (
+	MaxDatabaseConnectionAttempts = 10
+	DefaultAdminUsername          = "admin"
+	InitialAdminPassword          = "GOPHISH_INITIAL_ADMIN_PASSWORD"
+	InitialAdminApiToken          = "GOPHISH_INITIAL_ADMIN_API_TOKEN"
+)
 
 const (
 	CampaignInProgress string = "In progress"
@@ -74,28 +68,10 @@ type Response struct {
 	Data    interface{} `json:"data"`
 }
 
-// Copy of auth.GenerateSecureKey to prevent cyclic import with auth library
 func generateSecureKey() string {
 	k := make([]byte, 32)
 	io.ReadFull(rand.Reader, k)
 	return fmt.Sprintf("%x", k)
-}
-
-func chooseDBDriver(name, openStr string) goose.DBDriver {
-	d := goose.DBDriver{Name: name, OpenStr: openStr}
-
-	switch name {
-	case "mysql":
-		d.Import = "github.com/go-sql-driver/mysql"
-		d.Dialect = &goose.MySqlDialect{}
-
-	// Default database is sqlite3
-	default:
-		d.Import = "github.com/mattn/go-sqlite3"
-		d.Dialect = &goose.Sqlite3Dialect{}
-	}
-
-	return d
 }
 
 func createTemporaryPassword(u *User) error {
@@ -103,8 +79,6 @@ func createTemporaryPassword(u *User) error {
 	if envPassword := os.Getenv(InitialAdminPassword); envPassword != "" {
 		temporaryPassword = envPassword
 	} else {
-		// This will result in a 16 character password which could be viewed as an
-		// inconvenience, but it should be ok for now.
 		temporaryPassword = auth.GenerateSecureKey(auth.MinPasswordLength)
 	}
 	hash, err := auth.GeneratePasswordHash(temporaryPassword)
@@ -112,8 +86,6 @@ func createTemporaryPassword(u *User) error {
 		return err
 	}
 	u.Hash = hash
-	// Anytime a temporary password is created, we will force the user
-	// to change their password
 	u.PasswordChangeRequired = true
 	err = db.Save(u).Error
 	if err != nil {
@@ -123,126 +95,123 @@ func createTemporaryPassword(u *User) error {
 	return nil
 }
 
-// Setup initializes the database and runs any needed migrations.
-//
-// First, it establishes a connection to the database, then runs any migrations
-// newer than the version the database is on.
-//
-// Once the database is up-to-date, we create an admin user (if needed) that
-// has a randomly generated API key and password.
 func Setup(c *config.Config) error {
-	// Setup the package-scoped config
 	conf = c
-	// Setup the goose configuration
-	migrateConf := &goose.DBConf{
-		MigrationsDir: conf.MigrationsPath,
-		Env:           "production",
-		Driver:        chooseDBDriver(conf.DBName, conf.DBPath),
-	}
-	// Get the latest possible migration
-	latest, err := goose.GetMostRecentDBVersion(migrateConf.MigrationsDir)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
 
-	// Register certificates for tls encrypted db connections
 	if conf.DBSSLCaPath != "" {
 		switch conf.DBName {
 		case "mysql":
-			rootCertPool := x509.NewCertPool()
-			pem, err := ioutil.ReadFile(conf.DBSSLCaPath)
-			if err != nil {
-				log.Error(err)
-				return err
-			}
-			if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
-				log.Error("Failed to append PEM.")
-				return err
-			}
-			mysql.RegisterTLSConfig("ssl_ca", &tls.Config{
-				RootCAs: rootCertPool,
-			})
-			// Default database is sqlite3, which supports no tls, as connection
-			// is file based
-		default:
+			log.Warn("DBSSLCaPath not implemented")
+			//rootCertPool := x509.NewCertPool()
+			//pem, err := ioutil.ReadFile(conf.DBSSLCaPath)
+			//if err != nil {
+			//	log.Error(err)
+			//	return err
+			//}
+			//if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
+			//	log.Error("Failed to append PEM.")
+			//	return err
+			//}
+			//
 		}
 	}
 
-	// Open our database connection
+	var err error
 	i := 0
 	for {
 		db, err = gorm.Open(conf.DBName, conf.DBPath)
 		if err == nil {
 			break
 		}
-		if err != nil && i >= MaxDatabaseConnectionAttempts {
+		if i >= MaxDatabaseConnectionAttempts {
 			log.Error(err)
 			return err
 		}
-		i += 1
+		i++
 		log.Warn("waiting for database to be up...")
 		time.Sleep(5 * time.Second)
 	}
 	db.LogMode(false)
 	db.SetLogger(log.Logger)
 	db.DB().SetMaxOpenConns(1)
+
+	// Run migrations using golang-migrate
+	sqlDB := db.DB()
+	var m *migrate.Migrate
+
+	switch conf.DBName {
+	case "mysql":
+		driver, err := mysql.WithInstance(sqlDB, &mysql.Config{})
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		m, err = migrate.NewWithDatabaseInstance(
+			"file://"+conf.MigrationsPath,
+			"mysql",
+			driver,
+		)
+	case "sqlite3":
+		driver, err := sqlite3.WithInstance(sqlDB, &sqlite3.Config{})
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		m, err = migrate.NewWithDatabaseInstance(
+			"file://"+conf.MigrationsPath,
+			"sqlite3",
+			driver,
+		)
+	default:
+		return fmt.Errorf("unsupported database type: %s", conf.DBName)
+	}
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	// Migrate up to the latest version
-	err = goose.RunMigrationsOnDb(migrateConf, migrateConf.MigrationsDir, latest, db.DB())
-	if err != nil {
+
+	err = m.Up()
+	if err != nil && err != migrate.ErrNoChange {
 		log.Error(err)
 		return err
 	}
-	// Create the admin user if it doesn't exist
+
+	// Setup default admin user
 	var userCount int64
 	var adminUser User
 	db.Model(&User{}).Count(&userCount)
+
 	adminRole, err := GetRoleBySlug(RoleAdmin)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
+
 	if userCount == 0 {
-		adminUser := User{
+		adminUser = User{
 			Username:               DefaultAdminUsername,
 			Role:                   adminRole,
 			RoleID:                 adminRole.ID,
 			PasswordChangeRequired: true,
 		}
-
 		if envToken := os.Getenv(InitialAdminApiToken); envToken != "" {
 			adminUser.ApiKey = envToken
 		} else {
 			adminUser.ApiKey = auth.GenerateSecureKey(auth.APIKeyLength)
 		}
-
 		err = db.Save(&adminUser).Error
 		if err != nil {
 			log.Error(err)
 			return err
 		}
-	}
-	// If this is the first time the user is installing Gophish, then we will
-	// generate a temporary password for the admin user.
-	//
-	// We do this here instead of in the block above where the admin is created
-	// since there's the chance the user executes Gophish and has some kind of
-	// error, then tries restarting it. If they didn't grab the password out of
-	// the logs, then they would have lost it.
-	//
-	// By doing the temporary password here, we will regenerate that temporary
-	// password until the user is able to reset the admin password.
-	if adminUser.Username == "" {
+	} else {
 		adminUser, err = GetUserByUsername(DefaultAdminUsername)
 		if err != nil {
 			log.Error(err)
 			return err
 		}
 	}
+
 	if adminUser.PasswordChangeRequired {
 		err = createTemporaryPassword(&adminUser)
 		if err != nil {

@@ -26,53 +26,63 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 
-	"gopkg.in/alecthomas/kingpin.v2"
-
-	"github.com/gophish/gophish/config"
-	"github.com/gophish/gophish/controllers"
-	"github.com/gophish/gophish/dialer"
-	"github.com/gophish/gophish/imap"
-	log "github.com/gophish/gophish/logger"
-	"github.com/gophish/gophish/middleware"
-	"github.com/gophish/gophish/models"
-	"github.com/gophish/gophish/webhook"
+	"github.com/shtrv/gophish/config"
+	"github.com/shtrv/gophish/controllers"
+	"github.com/shtrv/gophish/dialer"
+	"github.com/shtrv/gophish/imap"
+	log "github.com/shtrv/gophish/logger"
+	"github.com/shtrv/gophish/middleware"
+	"github.com/shtrv/gophish/models"
+	"github.com/shtrv/gophish/webhook"
 )
 
 const (
-	modeAll   string = "all"
-	modeAdmin string = "admin"
-	modePhish string = "phish"
+	modeAll   = "all"
+	modeAdmin = "admin"
+	modePhish = "phish"
 )
 
 var (
-	configPath    = kingpin.Flag("config", "Location of config.json.").Default("./config.json").String()
-	disableMailer = kingpin.Flag("disable-mailer", "Disable the mailer (for use with multi-system deployments)").Bool()
-	mode          = kingpin.Flag("mode", fmt.Sprintf("Run the binary in one of the modes (%s, %s or %s)", modeAll, modeAdmin, modePhish)).
-			Default("all").Enum(modeAll, modeAdmin, modePhish)
+	configPath    string
+	disableMailer bool
+	mode          string
 )
 
-func main() {
-	// Load the version
+func init() {
+	flag.StringVar(&configPath, "config", "./config.json", "Location of config.json")
+	flag.BoolVar(&disableMailer, "disable-mailer", false, "Disable the mailer (for use with multi-system deployments)")
+	flag.StringVar(&mode, "mode", modeAll, fmt.Sprintf("Run the binary in one of the modes (%s, %s or %s)", modeAll, modeAdmin, modePhish))
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+		flag.PrintDefaults()
+	}
+}
 
+func main() {
+	flag.Parse()
+
+	if mode != modeAll && mode != modeAdmin && mode != modePhish {
+		fmt.Fprintf(os.Stderr, "Invalid mode: %s\n", mode)
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	// Load the version
 	version, err := ioutil.ReadFile("./VERSION")
 	if err != nil {
 		log.Fatal(err)
 	}
-	kingpin.Version(string(version))
-
-	// Parse the CLI flags and load the config
-	kingpin.CommandLine.HelpFlag.Short('h')
-	kingpin.Parse()
+	config.Version = string(version)
 
 	// Load the config
-	conf, err := config.LoadConfig(*configPath)
-	// Just warn if a contact address hasn't been configured
+	conf, err := config.LoadConfig(configPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -80,10 +90,8 @@ func main() {
 		log.Warnf("No contact address has been configured.")
 		log.Warnf("Please consider adding a contact_address entry in your config.json")
 	}
-	config.Version = string(version)
 
-	// Configure our various upstream clients to make sure that we restrict
-	// outbound connections as needed.
+	// Configure upstream clients
 	dialer.SetAllowedHosts(conf.AdminConf.AllowedInternalHosts)
 	webhook.SetTransport(&http.Transport{
 		DialContext: dialer.Dialer().DialContext,
@@ -94,52 +102,45 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Provide the option to disable the built-in mailer
-	// Setup the global variables and settings
 	err = models.Setup(conf)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Unlock any maillogs that may have been locked for processing
-	// when Gophish was last shutdown.
 	err = models.UnlockAllMailLogs()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Create our servers
+	// Setup servers
 	adminOptions := []controllers.AdminServerOption{}
-	if *disableMailer {
+	if disableMailer {
 		adminOptions = append(adminOptions, controllers.WithWorker(nil))
 	}
-	adminConfig := conf.AdminConf
-	adminServer := controllers.NewAdminServer(adminConfig, adminOptions...)
-	middleware.Store.Options.Secure = adminConfig.UseTLS
+	adminServer := controllers.NewAdminServer(conf.AdminConf, adminOptions...)
+	middleware.Store.Options.Secure = conf.AdminConf.UseTLS
 
-	phishConfig := conf.PhishConf
-	phishServer := controllers.NewPhishingServer(phishConfig)
-
+	phishServer := controllers.NewPhishingServer(conf.PhishConf)
 	imapMonitor := imap.NewMonitor()
-	if *mode == "admin" || *mode == "all" {
+
+	if mode == modeAdmin || mode == modeAll {
 		go adminServer.Start()
 		go imapMonitor.Start()
 	}
-	if *mode == "phish" || *mode == "all" {
+	if mode == modePhish || mode == modeAll {
 		go phishServer.Start()
 	}
 
-	// Handle graceful shutdown
+	// Graceful shutdown
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	<-c
 	log.Info("CTRL+C Received... Gracefully shutting down servers")
-	if *mode == modeAdmin || *mode == modeAll {
+
+	if mode == modeAdmin || mode == modeAll {
 		adminServer.Shutdown()
 		imapMonitor.Shutdown()
 	}
-	if *mode == modePhish || *mode == modeAll {
+	if mode == modePhish || mode == modeAll {
 		phishServer.Shutdown()
 	}
-
 }
