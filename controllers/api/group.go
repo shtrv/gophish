@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/jinzhu/gorm"
 	ctx "github.com/shtrv/gophish/context"
 	log "github.com/shtrv/gophish/logger"
 	"github.com/shtrv/gophish/models"
+	"gorm.io/gorm"
 )
 
 // Groups returns a list of groups if requested via GET.
