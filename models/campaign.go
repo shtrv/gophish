@@ -5,10 +5,10 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	log "github.com/shtrv/gophish/logger"
 	"github.com/shtrv/gophish/webhook"
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 // Campaign is a struct representing a created campaign
@@ -620,7 +620,7 @@ func PostCampaign(c *Campaign, uid int64) error {
 			recipientIndex++
 		}
 	}
-	
+
 	if err := tx.CreateInBatches(results, 100).Error; err != nil {
 		tx.Rollback()
 		return err

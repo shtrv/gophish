@@ -7,9 +7,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	"github.com/oschwald/maxminddb-golang"
 	log "github.com/shtrv/gophish/logger"
+	"gorm.io/gorm"
 )
 
 type mmCity struct {

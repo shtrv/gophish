@@ -17,10 +17,10 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 
-	"github.com/jinzhu/gorm"
 	"github.com/shtrv/gophish/auth"
 	"github.com/shtrv/gophish/config"
 	log "github.com/shtrv/gophish/logger"
+	"gorm.io/gorm"
 )
 
 var db *gorm.DB
