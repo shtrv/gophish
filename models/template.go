@@ -5,8 +5,8 @@ import (
 	"net/mail"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	log "github.com/shtrv/gophish/logger"
+	"gorm.io/gorm"
 )
 
 // Template models hold the attributes for an email template to be sent to targets
