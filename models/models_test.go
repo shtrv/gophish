@@ -117,8 +117,11 @@ func setupBenchmark(b *testing.B) {
 }
 
 func tearDownBenchmark(b *testing.B) {
-	err := db.Close()
+	sqlDB, err := db.DB()
 	if err != nil {
+		b.Fatalf("error getting raw database object: %v", err)
+	}
+	if err := sqlDB.Close(); err != nil {
 		b.Fatalf("error closing database: %v", err)
 	}
 }
