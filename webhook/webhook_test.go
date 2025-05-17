@@ -3,7 +3,8 @@ package webhook
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
+
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -66,7 +67,7 @@ func TestSendReal(t *testing.T) {
 			t.Fatalf("invalid content type. expected %s got %s", ct, expectedCT)
 		}
 
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			t.Fatalf("error reading JSON body from webhook request: %v", err)
 		}
