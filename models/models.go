@@ -163,6 +163,10 @@ func Setup(c *config.Config) error {
 			"mysql",
 			driver,
 		)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
 	case "sqlite3", "sqlite":
 		driver, err := sqlite3.WithInstance(sqlDB, &sqlite3.Config{})
 		if err != nil {
@@ -174,6 +178,10 @@ func Setup(c *config.Config) error {
 			"sqlite3",
 			driver,
 		)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
 	default:
 		return fmt.Errorf("unsupported database type for migrations: %s", conf.DBName)
 	}
