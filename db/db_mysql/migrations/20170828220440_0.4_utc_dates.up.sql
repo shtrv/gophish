@@ -1,4 +1,3 @@
--- SQL in section 'Up' is executed when this migration is applied
 UPDATE `campaigns` SET `created_date`=CONVERT_TZ(`created_date`, @@session.time_zone, '+00:00');
 UPDATE `campaigns` SET `completed_date`=CONVERT_TZ(`completed_date`, @@session.time_zone, '+00:00');
 UPDATE `campaigns` SET `launch_date`=CONVERT_TZ(`launch_date`, @@session.time_zone, '+00:00');
