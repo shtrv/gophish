@@ -86,8 +86,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if conf.ContactAddress == "" {
-		log.Warnf("No contact address has been configured.")
-		log.Warnf("Please consider adding a contact_address entry in your config.json")
+		log.Warnf("No contact address has been configured. Please consider adding a contact_address entry in your config.json")
 	}
 
 	// Configure upstream clients
@@ -115,7 +114,10 @@ func main() {
 	if disableMailer {
 		adminOptions = append(adminOptions, controllers.WithWorker(nil))
 	}
-	adminServer := controllers.NewAdminServer(conf.AdminConf, adminOptions...)
+	adminServer, err := controllers.NewAdminServer(conf.AdminConf, adminOptions...)
+	if err != nil {
+		log.Fatal(err)
+	}
 	middleware.Store.Options.Secure = conf.AdminConf.UseTLS
 
 	phishServer := controllers.NewPhishingServer(conf.PhishConf)
