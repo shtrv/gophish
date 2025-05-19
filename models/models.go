@@ -124,9 +124,9 @@ func Setup(c *config.Config) error {
 	for {
 		switch conf.DBName {
 		case "mysql":
-			db, dbErr = gorm.Open(mysqlDriver.Open(conf.DBPath), &gorm.Config{})  // NO LOGGER
+			db, dbErr = gorm.Open(mysqlDriver.Open(conf.DBPath), &gorm.Config{}) // NO LOGGER
 		case "sqlite":
-			db, dbErr = gorm.Open(sqliteDriver.Open(conf.DBPath), &gorm.Config{})  // NO LOGGER
+			db, dbErr = gorm.Open(sqliteDriver.Open(conf.DBPath), &gorm.Config{}) // NO LOGGER
 		}
 		if dbErr == nil {
 			break
@@ -146,7 +146,8 @@ func Setup(c *config.Config) error {
 		log.Error(err)
 		return err
 	}
-	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxOpenConns(10)
+	sqlDB.SetMaxIdleConns(5)
 
 	// Run migrations using golang-migrate
 	var m *migrate.Migrate
@@ -201,7 +202,6 @@ func Setup(c *config.Config) error {
 	setupDefaultAdmin()
 	return nil
 }
-
 
 func setupDefaultAdmin() error {
 	var userCount int64
