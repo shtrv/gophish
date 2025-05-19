@@ -61,7 +61,7 @@ func LoadConfig(filepath string) (*Config, error) {
 		config.Logging = &log.Config{}
 	}
 	// Choosing the migrations directory based on the database used.
-	config.MigrationsPath = config.MigrationsPath + config.DBName
+	// config.MigrationsPath = config.MigrationsPath + config.DBName //TODO: это как-то тупо
 	// Explicitly set the TestFlag to false to prevent config.json overrides
 	config.TestFlag = false
 	return config, nil
