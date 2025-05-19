@@ -181,12 +181,12 @@ func AddEvent(e *Event, campaignID int64) error {
 // an error is returned. Otherwise, the attribute name is set to [Deleted],
 // indicating the user deleted the attribute (template, smtp, etc.)
 func (c *Campaign) getDetails() error {
-	err := db.Model(c).Related(&c.Results).Error
+	err := db.Preload("Results").Preload("Events").First(&c, c.Id).Error
 	if err != nil {
 		log.Warnf("%s: results not found for campaign", err)
 		return err
 	}
-	err = db.Model(c).Related(&c.Events).Error
+	err = db.Preload("Events").First(&c, c.Id).Error
 	if err != nil {
 		log.Warnf("%s: events not found for campaign", err)
 		return err
@@ -304,7 +304,7 @@ func getCampaignStats(cid int64) (CampaignStats, error) {
 // GetCampaigns returns the campaigns owned by the given user.
 func GetCampaigns(uid int64) ([]Campaign, error) {
 	cs := []Campaign{}
-	err := db.Model(&User{Id: uid}).Related(&cs).Error
+	err := db.Where("user_id = ?", uid).Find(&cs).Error
 	if err != nil {
 		log.Error(err)
 	}
@@ -448,12 +448,8 @@ func GetQueuedCampaigns(t time.Time) ([]Campaign, error) {
 	return cs, err
 }
 
-// PostCampaign inserts a campaign and all associated records into the database.
-func PostCampaign(c *Campaign, uid int64) error {
-	err := c.Validate()
-	if err != nil {
-		return err
-	}
+// Initialize campaing, default params
+func InitializeCampaing(c *Campaign, uid int64) {
 	// Fill in the details
 	c.UserId = uid
 	c.CreatedDate = time.Now().UTC()
@@ -470,6 +466,18 @@ func PostCampaign(c *Campaign, uid int64) error {
 	if c.LaunchDate.Before(c.CreatedDate) || c.LaunchDate.Equal(c.CreatedDate) {
 		c.Status = CampaignInProgress
 	}
+}
+
+// PostCampaign inserts a campaign and all associated records into the database.
+func PostCampaign(c *Campaign, uid int64) error {
+	err := c.Validate()
+	if err != nil {
+		return err
+	}
+	
+	// Fill in the details
+	InitializeCampaing(c, uid)
+
 	// Check to make sure all the groups already exist
 	// Also, later we'll need to know the total number of recipients (counting
 	// duplicates is ok for now), so we'll do that here to save a loop.
@@ -539,10 +547,6 @@ func PostCampaign(c *Campaign, uid int64) error {
 	// Insert all the results
 	resultMap := make(map[string]bool)
 	recipientIndex := 0
-
-	var results []*Result
-	var mailLogs []*MailLog
-
 	tx := db.Begin()
 	for _, g := range c.Groups {
 		// Insert a result for each target in the group
@@ -571,7 +575,7 @@ func PostCampaign(c *Campaign, uid int64) error {
 			err = r.GenerateId(tx)
 			if err != nil {
 				log.Error(err)
-				//tx.Rollback()
+				tx.Rollback()
 				return err
 			}
 			processing := false
@@ -579,55 +583,36 @@ func PostCampaign(c *Campaign, uid int64) error {
 				r.Status = StatusSending
 				processing = true
 			}
-			// err = tx.Save(r).Error
-			// if err != nil {
-			// 	log.WithFields(logrus.Fields{
-			// 		"email": t.Email,
-			// 	}).Errorf("error creating result: %v", err)
-			// 	tx.Rollback()
-			// 	return err
-			// }
-
-			results = append(results, r)
-			mailLogs = append(mailLogs, &MailLog{
+			err = tx.Save(r).Error
+			if err != nil {
+				log.WithFields(logrus.Fields{
+					"email": t.Email,
+				}).Errorf("error creating result: %v", err)
+				tx.Rollback()
+				return err
+			}
+			c.Results = append(c.Results, *r)
+			log.WithFields(logrus.Fields{
+				"email":     r.Email,
+				"send_date": sendDate,
+			}).Debug("creating maillog")
+			m := &MailLog{
 				UserId:     c.UserId,
 				CampaignId: c.Id,
 				RId:        r.RId,
 				SendDate:   sendDate,
 				Processing: processing,
-			})
-
-			c.Results = append(c.Results, *r)
-			// log.WithFields(logrus.Fields{
-			// 	"email":     r.Email,
-			// 	"send_date": sendDate,
-			// }).Debug("creating maillog")
-			// m := &MailLog{
-			// 	UserId:     c.UserId,
-			// 	CampaignId: c.Id,
-			// 	RId:        r.RId,
-			// 	SendDate:   sendDate,
-			// 	Processing: processing,
-			// }
-			// err = tx.Save(m).Error
-			// if err != nil {
-			// 	log.WithFields(logrus.Fields{
-			// 		"email": t.Email,
-			// 	}).Errorf("error creating maillog entry: %v", err)
-			// 	tx.Rollback()
-			// 	return err
-			// }
+			}
+			err = tx.Save(m).Error
+			if err != nil {
+				log.WithFields(logrus.Fields{
+					"email": t.Email,
+				}).Errorf("error creating maillog entry: %v", err)
+				tx.Rollback()
+				return err
+			}
 			recipientIndex++
 		}
-	}
-
-	if err := tx.CreateInBatches(results, 100).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-	if err := tx.CreateInBatches(mailLogs, 100).Error; err != nil {
-		tx.Rollback()
-		return err
 	}
 	return tx.Commit().Error
 }

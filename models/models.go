@@ -12,6 +12,9 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
 
+	mysqlDriver "gorm.io/driver/mysql"
+	sqliteDriver "gorm.io/driver/sqlite"
+
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/mysql"
 	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
@@ -116,27 +119,36 @@ func Setup(c *config.Config) error {
 		}
 	}
 
-	var err error
 	i := 0
+	var dbErr error
 	for {
-		db, err = gorm.Open(conf.DBName, conf.DBPath)
-		if err == nil {
+		switch conf.DBName {
+		case "mysql":
+			db, dbErr = gorm.Open(mysqlDriver.Open(conf.DBPath), &gorm.Config{})  // NO LOGGER
+		case "sqlite":
+			db, dbErr = gorm.Open(sqliteDriver.Open(conf.DBPath), &gorm.Config{})  // NO LOGGER
+		}
+		if dbErr == nil {
 			break
 		}
 		if i >= MaxDatabaseConnectionAttempts {
-			log.Error(err)
-			return err
+			log.Error(dbErr)
+			return dbErr
 		}
 		i++
 		log.Warn("waiting for database to be up...")
 		time.Sleep(5 * time.Second)
 	}
-	db.LogMode(false)
-	db.SetLogger(log.Logger)
-	db.DB().SetMaxOpenConns(1)
+
+	// Setting connection pools
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	sqlDB.SetMaxOpenConns(1)
 
 	// Run migrations using golang-migrate
-	sqlDB := db.DB()
 	var m *migrate.Migrate
 
 	switch conf.DBName {
@@ -151,7 +163,11 @@ func Setup(c *config.Config) error {
 			"mysql",
 			driver,
 		)
-	case "sqlite3":
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	case "sqlite3", "sqlite":
 		driver, err := sqlite3.WithInstance(sqlDB, &sqlite3.Config{})
 		if err != nil {
 			log.Error(err)
@@ -162,9 +178,14 @@ func Setup(c *config.Config) error {
 			"sqlite3",
 			driver,
 		)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
 	default:
-		return fmt.Errorf("unsupported database type: %s", conf.DBName)
+		return fmt.Errorf("unsupported database type for migrations: %s", conf.DBName)
 	}
+
 	if err != nil {
 		log.Error(err)
 		return err
@@ -177,9 +198,19 @@ func Setup(c *config.Config) error {
 	}
 
 	// Setup default admin user
+	setupDefaultAdmin()
+	return nil
+}
+
+
+func setupDefaultAdmin() error {
 	var userCount int64
 	var adminUser User
-	db.Model(&User{}).Count(&userCount)
+
+	if err := db.Model(&User{}).Count(&userCount).Error; err != nil {
+		log.Error(err)
+		return err
+	}
 
 	adminRole, err := GetRoleBySlug(RoleAdmin)
 	if err != nil {
@@ -199,8 +230,7 @@ func Setup(c *config.Config) error {
 		} else {
 			adminUser.ApiKey = auth.GenerateSecureKey(auth.APIKeyLength)
 		}
-		err = db.Save(&adminUser).Error
-		if err != nil {
+		if err := db.Create(&adminUser).Error; err != nil {
 			log.Error(err)
 			return err
 		}
@@ -213,11 +243,11 @@ func Setup(c *config.Config) error {
 	}
 
 	if adminUser.PasswordChangeRequired {
-		err = createTemporaryPassword(&adminUser)
-		if err != nil {
+		if err := createTemporaryPassword(&adminUser); err != nil {
 			log.Error(err)
 			return err
 		}
 	}
+
 	return nil
 }
