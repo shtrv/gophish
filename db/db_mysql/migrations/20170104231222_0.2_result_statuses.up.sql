@@ -1,4 +1,3 @@
--- SQL in section 'Up' is executed when this migration is applied
 UPDATE `results`
 SET status = "Submitted Data"
 WHERE id IN (

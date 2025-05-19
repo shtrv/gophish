@@ -1,20 +1,20 @@
 {
 	"admin_server": {
 		"listen_url": "127.0.0.1:3333",
-		"use_tls": true,
+		"use_tls": false,
 		"cert_path": "gophish_admin.crt",
 		"key_path": "gophish_admin.key",
 		"trusted_origins": []
 	},
 	"phish_server": {
-		"listen_url": "0.0.0.0:80",
+		"listen_url": "127.0.0.1:8080",
 		"use_tls": false,
 		"cert_path": "example.crt",
 		"key_path": "example.key"
 	},
-	"db_name": "sqlite3",
-	"db_path": "gophish.db",
-	"migrations_prefix": "db/db_",
+	"db_name": "mysql",
+	"db_path": "gophish:gophish@(localhost:3306)/gophish?charset=utf8&parseTime=True&loc=UTC&multiStatements=true",
+	"migrations_prefix": "db/db_mysql/migrations",
 	"contact_address": "",
 	"logging": {
 		"filename": "",

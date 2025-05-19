@@ -1,4 +1,3 @@
--- SQL in section 'Up' is executed when this migration is applied
 CREATE TABLE IF NOT EXISTS `mail_logs` (
     `id` integer primary key auto_increment,
     `campaign_id` integer,

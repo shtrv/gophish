@@ -1,4 +1,3 @@
--- SQL in section 'Up' is executed when this migration is applied
 CREATE TABLE IF NOT EXISTS `email_requests` (
     `id` integer primary key auto_increment,
     `user_id` integer,

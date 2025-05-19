@@ -71,8 +71,11 @@ func WithWorker(w worker.Worker) AdminServerOption {
 
 // NewAdminServer returns a new instance of the AdminServer with the
 // provided config and options applied.
-func NewAdminServer(config config.AdminServer, options ...AdminServerOption) *AdminServer {
-	defaultWorker, _ := worker.New()
+func NewAdminServer(config config.AdminServer, options ...AdminServerOption) (*AdminServer, error) {
+	defaultWorker, err := worker.New()
+	if err != nil {
+		return nil, err
+	}
 	defaultServer := &http.Server{
 		ReadTimeout: 10 * time.Second,
 		Addr:        config.ListenURL,
@@ -88,7 +91,7 @@ func NewAdminServer(config config.AdminServer, options ...AdminServerOption) *Ad
 		opt(as)
 	}
 	as.registerRoutes()
-	return as
+	return as, nil
 }
 
 // Start launches the admin server, listening on the configured address.

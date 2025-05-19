@@ -1,4 +1,3 @@
--- SQL in section 'Up' is executed when this migration is applied
 CREATE TABLE IF NOT EXISTS `roles` (
     `id`          INTEGER PRIMARY KEY AUTO_INCREMENT,
     `slug`        VARCHAR(255) NOT NULL UNIQUE,

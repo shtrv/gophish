@@ -1,4 +1,3 @@
--- SQL section 'Down' is executed when this migration is rolled back
 DROP TABLE `attachments`;
 DROP TABLE `campaigns`;
 DROP TABLE `events`;

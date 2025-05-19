@@ -1,7 +1,4 @@
--- SQL in section 'Up' is executed when this migration is applied
--- Move the relationship between campaigns and smtp to campaigns
 ALTER TABLE `campaigns` ADD COLUMN smtp_id bigint;
--- Create a new table to store smtp records
 DROP TABLE `smtp`;
 CREATE TABLE `smtp`(
 	id integer primary key auto_increment,
