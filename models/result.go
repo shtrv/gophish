@@ -1,15 +1,14 @@
 package models
 
 import (
-	"crypto/rand"
 	"encoding/json"
-	"math/big"
 	"net"
 	"time"
 
 	log "github.com/gophish/gophish/logger"
 	"github.com/jinzhu/gorm"
 	"github.com/oschwald/maxminddb-golang"
+	"github.com/lithammer/shortuuid/v4"
 )
 
 type mmCity struct {
@@ -171,15 +170,8 @@ func (r *Result) UpdateGeo(addr string) error {
 }
 
 func generateResultId() (string, error) {
-	const alphaNum = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	k := make([]byte, 9)
-	for i := range k {
-		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphaNum))))
-		if err != nil {
-			return "", err
-		}
-		k[i] = alphaNum[idx.Int64()]
-	}
+	const alphaNum = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxy"
+	k := shortuuid.NewWithAlphabet(alphaNum)
 	return string(k), nil
 }
 
