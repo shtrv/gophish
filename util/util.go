@@ -25,10 +25,10 @@ import (
 )
 
 var (
-	firstNameRegex = regexp.MustCompile(`(?i)first[\s_-]*name`)
-	lastNameRegex  = regexp.MustCompile(`(?i)last[\s_-]*name`)
-	emailRegex     = regexp.MustCompile(`(?i)email`)
-	positionRegex  = regexp.MustCompile(`(?i)position`)
+	firstNameRegex   = regexp.MustCompile(`(?i)first[\s_-]*name`)
+	lastNameRegex    = regexp.MustCompile(`(?i)last[\s_-]*name`)
+	emailRegex       = regexp.MustCompile(`(?i)email`)
+	positionRegex    = regexp.MustCompile(`(?i)position`)
 	simpleEmailRegex = regexp.MustCompile(`^(?P<local>[a-zA-Z0-9.!#$%&'*+/=?^_\x60{|}~-]+)@(?P<domain>[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)$`)
 )
 
@@ -104,10 +104,10 @@ func ParseCSV(r *http.Request) ([]models.Target, error) {
 			}
 			if ei != -1 && len(record) > ei {
 				emailRaw := strings.TrimSpace(record[ei])
-                if !simpleEmailRegex.MatchString(emailRaw) {
-                    continue
-                }
-                ea = emailRaw
+				if !simpleEmailRegex.MatchString(emailRaw) {
+					continue
+				}
+				ea = emailRaw
 			}
 			if pi != -1 && len(record) > pi {
 				ps = record[pi]
