@@ -7,8 +7,8 @@ import (
 
 	log "github.com/gophish/gophish/logger"
 	"github.com/jinzhu/gorm"
-	"github.com/oschwald/maxminddb-golang"
 	"github.com/lithammer/shortuuid/v4"
+	"github.com/oschwald/maxminddb-golang"
 )
 
 type mmCity struct {
