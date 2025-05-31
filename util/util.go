@@ -16,6 +16,7 @@ import (
 	"net/mail"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	log "github.com/gophish/gophish/logger"
@@ -28,6 +29,7 @@ var (
 	lastNameRegex  = regexp.MustCompile(`(?i)last[\s_-]*name`)
 	emailRegex     = regexp.MustCompile(`(?i)email`)
 	positionRegex  = regexp.MustCompile(`(?i)position`)
+	simpleEmailRegex = regexp.MustCompile(`^(?P<local>[a-zA-Z0-9.!#$%&'*+/=?^_\x60{|}~-]+)@(?P<domain>[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)$`)
 )
 
 // ParseMail takes in an HTTP Request and returns an Email object
@@ -101,11 +103,11 @@ func ParseCSV(r *http.Request) ([]models.Target, error) {
 				ln = record[li]
 			}
 			if ei != -1 && len(record) > ei {
-				csvEmail, err := mail.ParseAddress(record[ei])
-				if err != nil {
-					continue
-				}
-				ea = csvEmail.Address
+				emailRaw := strings.TrimSpace(record[ei])
+                if !simpleEmailRegex.MatchString(emailRaw) {
+                    continue
+                }
+                ea = emailRaw
 			}
 			if pi != -1 && len(record) > pi {
 				ps = record[pi]
