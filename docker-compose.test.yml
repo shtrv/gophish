@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  gophish:
+    build:
+      context: .
+    container_name: gophish
+    ports:
+      - "3333:3333"
+      - "8080:8080"
+      - "8443:8443"
+      - "80:80"
+    depends_on:
+      - mysql
+    environment:
+      ADMIN_LISTEN_URL: 'localhost:3333'
+      ADMIN_USE_TLS: false
+      ADMIN_CERT_PATH:
+      ADMIN_KEY_PATH:
+      ADMIN_TRUSTED_ORIGINS:
+      PHISH_LISTEN_URL: 'localhost:80'
+      PHISH_USE_TLS: false
+      PHISH_CERT_PATH:
+      PHISH_KEY_PATH:
+      CONTACT_ADDRESS:
+      DB_NAME: 'mysql'  # db_type
+      DB_FILE_PATH: 'gophish:gphMYSQL-123@(mysql:3306)/gophish?charset=utf8&parseTime=True&loc=UTC'
+    networks:
+      - gophish-net
+
+  mysql:
+    image: mysql:5.7
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 'rootMYSQL-123'
+      MYSQL_USER: 'gophish'
+      MYSQL_PASSWORD: 'gphMYSQL-123'
+      MYSQL_DATABASE: 'gophish'
+    ports:
+      - "3306:3306"
+    networks:
+      - gophish-net
+
+  postfix:
+    image: boky/postfix
+    container_name: postfix
+    depends_on:
+      - mailpit
+    environment:
+      HOSTNAME: "postfix.local"  # or any domain.zone
+      ALLOWED_SENDER_DOMAINS: "*"  # or any domain.zone
+      RELAY_HOST: "[mailpit]:1025"
+    ports:
+      - "1587:587"
+    networks:
+      - gophish-net
+  
+  mailpit:
+    image: axllent/mailpit
+    container_name: mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - gophish-net
+
+networks:
+  gophish-net:
+    driver: bridge
