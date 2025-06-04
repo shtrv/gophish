@@ -13,12 +13,12 @@ services:
     depends_on:
       - mysql
     environment:
-      ADMIN_LISTEN_URL: 'localhost:3333'
+      ADMIN_LISTEN_URL: '0.0.0.0:3333'
       ADMIN_USE_TLS: false
       ADMIN_CERT_PATH:
       ADMIN_KEY_PATH:
       ADMIN_TRUSTED_ORIGINS:
-      PHISH_LISTEN_URL: 'localhost:80'
+      PHISH_LISTEN_URL: '0.0.0.0:80'
       PHISH_USE_TLS: false
       PHISH_CERT_PATH:
       PHISH_KEY_PATH:
