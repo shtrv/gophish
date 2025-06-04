@@ -1,14 +1,13 @@
 package models
 
 import (
-	"crypto/rand"
 	"encoding/json"
-	"math/big"
 	"net"
 	"time"
 
 	log "github.com/gophish/gophish/logger"
 	"github.com/jinzhu/gorm"
+	"github.com/lithammer/shortuuid/v4"
 	"github.com/oschwald/maxminddb-golang"
 )
 
@@ -171,33 +170,19 @@ func (r *Result) UpdateGeo(addr string) error {
 }
 
 func generateResultId() (string, error) {
-	const alphaNum = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	k := make([]byte, 7)
-	for i := range k {
-		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphaNum))))
-		if err != nil {
-			return "", err
-		}
-		k[i] = alphaNum[idx.Int64()]
-	}
+	const alphaNum = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxy"
+	k := shortuuid.NewWithAlphabet(alphaNum)
 	return string(k), nil
 }
 
 // GenerateId generates a unique key to represent the result
 // in the database
 func (r *Result) GenerateId(tx *gorm.DB) error {
-	// Keep trying until we generate a unique key (shouldn't take more than one or two iterations)
-	for {
-		rid, err := generateResultId()
-		if err != nil {
-			return err
-		}
-		r.RId = rid
-		err = tx.Table("results").Where("r_id=?", r.RId).First(&Result{}).Error
-		if err == gorm.ErrRecordNotFound {
-			break
-		}
+	rid, err := generateResultId()
+	if err != nil {
+		return err
 	}
+	r.RId = rid
 	return nil
 }
 
