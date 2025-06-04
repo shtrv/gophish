@@ -51,7 +51,7 @@ services:
     environment:
       HOSTNAME: "postfix.local"  # or any domain.zone
       ALLOWED_SENDER_DOMAINS: "*"  # or any domain.zone
-      RELAY_HOST: "[mailpit]:1025"
+      RELAYHOST: "[mailpit]:1025"
     ports:
       - "1587:587"
     networks:
