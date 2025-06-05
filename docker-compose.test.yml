@@ -52,8 +52,7 @@ services:
       HOSTNAME: "postfix.local"  # or any domain.zone
       ALLOWED_SENDER_DOMAINS: "*"  # or any domain.zone
       RELAYHOST: "[mailpit]:1025"
-    volumes:
-      - ./docker/configs/main.test.cf:/etc/postfix/main.cf  # to not resolve recipient domain
+      POSTFIX_smtpd_recipient_restrictions: 'permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination'
     ports:
       - "1587:587"
     networks:
