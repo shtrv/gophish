@@ -37,6 +37,8 @@ services:
       MYSQL_PASSWORD: 'gphMYSQL-123'
       MYSQL_DATABASE: 'gophish'
     command:
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
       --sql-mode="ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"
     ports:
       - "3306:3306"
