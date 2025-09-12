@@ -267,7 +267,7 @@ func (s *ModelsSuite) TestMailLogGenerateTransparencyHeaders(ch *check.C) {
 	s.config.ContactAddress = "test@test.com"
 	expectedHeaders := map[string]string{
 		"X-Mailer":          config.ServerName,
-		"X-Contact": s.config.ContactAddress,
+		"X-Contact":         s.config.ContactAddress,
 	}
 	campaign := s.createCampaign(ch)
 	got := s.emailFromFirstMailLog(campaign, ch)
@@ -279,7 +279,7 @@ func (s *ModelsSuite) TestMailLogGenerateTransparencyHeaders(ch *check.C) {
 func (s *ModelsSuite) TestMailLogGenerateOverrideTransparencyHeaders(ch *check.C) {
 	expectedHeaders := map[string]string{
 		"X-Mailer":          "",
-		"X-Contact": "",
+		"X-Contact":         "",
 	}
 	smtp := SMTP{
 		Name:        "Test SMTP",
