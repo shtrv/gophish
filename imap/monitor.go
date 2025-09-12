@@ -5,6 +5,7 @@ package imap
 *		 - Have a DB field "last_login_error" if last login failed
 *		 - DB counter for non-campaign emails that the admin should investigate
 *		 - Add field to User for numner of non-campaign emails reported
+*		 - Revoke for new rid formats (longer than 7 chars) and RecipientParameter = 'uid'
  */
 import (
 	"bytes"
